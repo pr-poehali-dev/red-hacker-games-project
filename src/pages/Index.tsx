@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import AudioControls from '@/components/AudioControls';
+import { audioManager } from '@/utils/audio';
 
 // Game Components
 const SnakeGame = ({ onScore }: { onScore: (score: number) => void }) => {
@@ -34,6 +36,7 @@ const SnakeGame = ({ onScore }: { onScore: (score: number) => void }) => {
       if (head[0] < 0 || head[0] >= 20 || head[1] < 0 || head[1] >= 20) {
         setGameOver(true);
         setIsPlaying(false);
+        audioManager.playGameOverSound();
         return prevSnake;
       }
 
@@ -41,6 +44,7 @@ const SnakeGame = ({ onScore }: { onScore: (score: number) => void }) => {
         if (head[0] === segment[0] && head[1] === segment[1]) {
           setGameOver(true);
           setIsPlaying(false);
+          audioManager.playGameOverSound();
           return prevSnake;
         }
       }
@@ -333,14 +337,17 @@ const PongGame = ({ onScore }: { onScore: (score: number) => void }) => {
 
       if (newY <= 10 || newY >= 290) {
         newDirY = -newDirY;
+        audioManager.playBounceSound();
       }
 
       if (newX <= 30 && newY >= playerY && newY <= playerY + 60) {
         newDirX = -newDirX;
+        audioManager.playHitSound();
       }
 
       if (newX >= 370 && newY >= aiY && newY <= aiY + 60) {
         newDirX = -newDirX;
+        audioManager.playHitSound();
       }
 
       if (newX <= 0) {
@@ -447,6 +454,7 @@ const BreakoutGame = ({ onScore }: { onScore: (score: number) => void }) => {
 
       if (newY >= 280 && newX >= paddleX && newX <= paddleX + 50) {
         newDirY = -Math.abs(newDirY);
+        audioManager.playBounceSound();
       }
 
       const blockRow = Math.floor((newY - 20) / 20);
@@ -465,6 +473,7 @@ const BreakoutGame = ({ onScore }: { onScore: (score: number) => void }) => {
           return newScore;
         });
         newDirY = -newDirY;
+        audioManager.playHitSound();
       }
 
       if (newY >= 300) {
@@ -582,6 +591,7 @@ const SpaceGame = ({ onScore }: { onScore: (score: number) => void }) => {
               setScore(prev => {
                 const newScore = prev + 10;
                 onScore(newScore);
+                audioManager.playExplosionSound();
                 return newScore;
               });
               break;
@@ -619,6 +629,7 @@ const SpaceGame = ({ onScore }: { onScore: (score: number) => void }) => {
       if (e.key === ' ') {
         e.preventDefault();
         setBullets(prev => [...prev, { x: shipX, y: 270 }]);
+        audioManager.playClickSound();
       }
     };
 
@@ -678,7 +689,10 @@ const FlappyGame = ({ onScore }: { onScore: (score: number) => void }) => {
   };
 
   const jump = () => {
-    if (isPlaying) setVelocity(-8);
+    if (isPlaying) {
+      setVelocity(-8);
+      audioManager.playJumpSound();
+    }
   };
 
   const updateGame = useCallback(() => {
@@ -1880,6 +1894,19 @@ const IdleGame = ({ onScore }: { onScore: (score: number) => void }) => {
 export default function Index() {
   const [totalScore, setTotalScore] = useState(0);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
+  const [showAudioControls, setShowAudioControls] = useState(false);
+
+  useEffect(() => {
+    // Start background music when component mounts
+    const timer = setTimeout(() => {
+      audioManager.startBackgroundMusic();
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      audioManager.stopBackgroundMusic();
+    };
+  }, []);
 
   const games = [
     { id: 'snake', name: 'Змейка', description: 'Классическая игра змейка с неоновым стилем', icon: 'Zap', component: SnakeGame },
@@ -1924,9 +1951,21 @@ export default function Index() {
                 Общий счет: {totalScore}
               </div>
             </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={() => setShowAudioControls(!showAudioControls)}
+                variant="outline"
+                className="border-cyber-purple text-cyber-purple hover:bg-cyber-purple hover:text-black"
+              >
+                <Icon name="Volume2" size={16} className="mr-2" />
+                Звук
+              </Button>
             {selectedGame && (
               <Button 
-                onClick={() => setSelectedGame(null)}
+                onClick={() => {
+                  setSelectedGame(null);
+                  audioManager.playMenuSound();
+                }}
                 variant="outline"
                 className="border-cyber-blue text-cyber-blue hover:bg-cyber-blue hover:text-black"
               >
@@ -1937,6 +1976,21 @@ export default function Index() {
           </div>
         </div>
       </header>
+
+      {/* Audio Controls Modal */}
+      {showAudioControls && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="relative">
+            <Button
+              onClick={() => setShowAudioControls(false)}
+              className="absolute -top-2 -right-2 z-10 w-8 h-8 p-0 rounded-full bg-cyber-red hover:bg-cyber-red/80"
+            >
+              <Icon name="X" size={16} />
+            </Button>
+            <AudioControls />
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto px-4 py-8">
         {!selectedGame ? (
@@ -1962,7 +2016,10 @@ export default function Index() {
                 <Card
                   key={game.id}
                   className="game-card cursor-pointer"
-                  onClick={() => setSelectedGame(game.id)}
+                  onClick={() => {
+                    setSelectedGame(game.id);
+                    audioManager.playMenuSound();
+                  }}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
