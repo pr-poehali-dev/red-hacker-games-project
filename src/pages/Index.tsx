@@ -2053,30 +2053,30 @@ export default function Index() {
             </Card>
           </section>
         )}
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50 mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center space-y-4">
-            <div className="text-cyber-red neon-text font-bold text-lg">
-              Создано Red Hacker
-            </div>
-            <a
-              href="https://t.me/red_hacker88"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 text-cyber-blue hover:text-cyber-purple transition-colors neon-text"
-            >
-              <Icon name="MessageCircle" size={20} />
-              <span>Telegram канал автора</span>
-            </a>
-            <div className="text-sm text-muted-foreground">
-              Все игры созданы с использованием современных веб-технологий
+        {/* Footer */}
+        <footer className="border-t border-border bg-card/50 mt-16">
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center space-y-4">
+              <div className="text-cyber-red neon-text font-bold text-lg">
+                Создано Red Hacker
+              </div>
+              <a
+                href="https://t.me/red_hacker88"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 text-cyber-blue hover:text-cyber-purple transition-colors neon-text"
+              >
+                <Icon name="MessageCircle" size={20} />
+                <span>Telegram канал автора</span>
+              </a>
+              <div className="text-sm text-muted-foreground">
+                Все игры созданы с использованием современных веб-технологий
+              </div>
             </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </main>
     </div>
   );
 }
