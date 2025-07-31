@@ -1975,6 +1975,7 @@ export default function Index() {
               )}
             </div>
           </div>
+        </div>
       </header>
 
       {/* Audio Controls Modal */}
