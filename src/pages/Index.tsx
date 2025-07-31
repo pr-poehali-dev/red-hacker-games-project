@@ -1890,6 +1890,231 @@ const IdleGame = ({ onScore }: { onScore: (score: number) => void }) => {
   );
 };
 
+const TetrisGame = ({ onScore }: { onScore: (score: number) => void }) => {
+  const [grid, setGrid] = useState<number[][]>([]);
+  const [currentPiece, setCurrentPiece] = useState<{shape: number[][], x: number, y: number} | null>(null);
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const gameLoopRef = useRef<NodeJS.Timeout>();
+
+  const GRID_WIDTH = 10;
+  const GRID_HEIGHT = 20;
+
+  const tetrisPieces = [
+    [[1,1,1,1]], // I
+    [[1,1],[1,1]], // O
+    [[0,1,0],[1,1,1]], // T
+    [[0,1,1],[1,1,0]], // S
+    [[1,1,0],[0,1,1]], // Z
+    [[1,0,0],[1,1,1]], // J
+    [[0,0,1],[1,1,1]]  // L
+  ];
+
+  const initGrid = () => {
+    return Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(0));
+  };
+
+  const spawnPiece = () => {
+    const piece = tetrisPieces[Math.floor(Math.random() * tetrisPieces.length)];
+    return {
+      shape: piece,
+      x: Math.floor(GRID_WIDTH / 2) - Math.floor(piece[0].length / 2),
+      y: 0
+    };
+  };
+
+  const resetGame = () => {
+    setGrid(initGrid());
+    setCurrentPiece(spawnPiece());
+    setScore(0);
+    setGameOver(false);
+    setIsPlaying(true);
+    audioManager.playMenuSound();
+  };
+
+  const canMovePiece = (piece: any, dx: number, dy: number, newGrid = grid) => {
+    for (let y = 0; y < piece.shape.length; y++) {
+      for (let x = 0; x < piece.shape[y].length; x++) {
+        if (piece.shape[y][x]) {
+          const newX = piece.x + x + dx;
+          const newY = piece.y + y + dy;
+          
+          if (newX < 0 || newX >= GRID_WIDTH || newY >= GRID_HEIGHT) return false;
+          if (newY >= 0 && newGrid[newY][newX]) return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const placePiece = (piece: any, gameGrid: number[][]) => {
+    const newGrid = gameGrid.map(row => [...row]);
+    for (let y = 0; y < piece.shape.length; y++) {
+      for (let x = 0; x < piece.shape[y].length; x++) {
+        if (piece.shape[y][x]) {
+          const gridY = piece.y + y;
+          const gridX = piece.x + x;
+          if (gridY >= 0) {
+            newGrid[gridY][gridX] = 1;
+          }
+        }
+      }
+    }
+    return newGrid;
+  };
+
+  const clearLines = (gameGrid: number[][]) => {
+    let linesCleared = 0;
+    const newGrid = gameGrid.filter(row => {
+      if (row.every(cell => cell === 1)) {
+        linesCleared++;
+        return false;
+      }
+      return true;
+    });
+
+    while (newGrid.length < GRID_HEIGHT) {
+      newGrid.unshift(Array(GRID_WIDTH).fill(0));
+    }
+
+    if (linesCleared > 0) {
+      audioManager.playSuccessSound();
+      const points = linesCleared * 100 * linesCleared;
+      setScore(prev => prev + points);
+      onScore(points);
+    }
+
+    return newGrid;
+  };
+
+  const gameLoop = useCallback(() => {
+    if (!currentPiece || gameOver || !isPlaying) return;
+
+    if (canMovePiece(currentPiece, 0, 1)) {
+      setCurrentPiece(prev => prev ? {...prev, y: prev.y + 1} : null);
+    } else {
+      const newGrid = placePiece(currentPiece, grid);
+      const clearedGrid = clearLines(newGrid);
+      setGrid(clearedGrid);
+      
+      const newPiece = spawnPiece();
+      if (!canMovePiece(newPiece, 0, 0, clearedGrid)) {
+        setGameOver(true);
+        setIsPlaying(false);
+        audioManager.playErrorSound();
+      } else {
+        setCurrentPiece(newPiece);
+        audioManager.playCollectSound();
+      }
+    }
+  }, [currentPiece, grid, gameOver, isPlaying]);
+
+  useEffect(() => {
+    if (isPlaying && !gameOver) {
+      gameLoopRef.current = setTimeout(gameLoop, 500);
+      return () => {
+        if (gameLoopRef.current) {
+          clearTimeout(gameLoopRef.current);
+        }
+      };
+    }
+  }, [gameLoop, isPlaying, gameOver]);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!currentPiece || !isPlaying || gameOver) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          if (canMovePiece(currentPiece, -1, 0)) {
+            setCurrentPiece(prev => prev ? {...prev, x: prev.x - 1} : null);
+          }
+          break;
+        case 'ArrowRight':
+          if (canMovePiece(currentPiece, 1, 0)) {
+            setCurrentPiece(prev => prev ? {...prev, x: prev.x + 1} : null);
+          }
+          break;
+        case 'ArrowDown':
+          if (canMovePiece(currentPiece, 0, 1)) {
+            setCurrentPiece(prev => prev ? {...prev, y: prev.y + 1} : null);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentPiece, isPlaying, gameOver]);
+
+  const renderGrid = () => {
+    const displayGrid = grid.map(row => [...row]);
+    
+    if (currentPiece) {
+      for (let y = 0; y < currentPiece.shape.length; y++) {
+        for (let x = 0; x < currentPiece.shape[y].length; x++) {
+          if (currentPiece.shape[y][x]) {
+            const gridY = currentPiece.y + y;
+            const gridX = currentPiece.x + x;
+            if (gridY >= 0 && gridY < GRID_HEIGHT && gridX >= 0 && gridX < GRID_WIDTH) {
+              displayGrid[gridY][gridX] = 2;
+            }
+          }
+        }
+      }
+    }
+
+    return displayGrid.map((row, y) => (
+      <div key={y} className="flex">
+        {row.map((cell, x) => (
+          <div
+            key={x}
+            className={`w-6 h-6 border border-gray-600 ${
+              cell === 1 ? 'bg-cyber-blue' : 
+              cell === 2 ? 'bg-cyber-purple' : 
+              'bg-gray-900'
+            }`}
+          />
+        ))}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="flex flex-col items-center space-y-4 p-4">
+      <div className="text-2xl font-bold text-cyber-blue neon-text">
+        Счет: {score}
+      </div>
+      
+      <div className="border-2 border-cyber-blue rounded-lg p-2 bg-gray-900">
+        {renderGrid()}
+      </div>
+
+      {gameOver && (
+        <div className="text-center space-y-2">
+          <div className="text-red-500 font-bold">Игра окончена!</div>
+          <div className="text-cyber-blue">Финальный счет: {score}</div>
+        </div>
+      )}
+
+      <div className="flex space-x-2">
+        <Button 
+          onClick={resetGame}
+          className="bg-cyber-green hover:bg-cyber-green/80 text-black font-bold"
+        >
+          {gameOver ? 'Играть снова' : 'Новая игра'}
+        </Button>
+      </div>
+
+      <div className="text-xs text-gray-400 text-center">
+        ← → перемещение<br/>
+        ↓ ускорение
+      </div>
+    </div>
+  );
+};
+
 // Main Component
 export default function Index() {
   const [totalScore, setTotalScore] = useState(0);
