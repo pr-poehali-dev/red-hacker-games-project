@@ -1960,21 +1960,21 @@ export default function Index() {
                 <Icon name="Volume2" size={16} className="mr-2" />
                 Звук
               </Button>
-            {selectedGame && (
-              <Button 
-                onClick={() => {
-                  setSelectedGame(null);
-                  audioManager.playMenuSound();
-                }}
-                variant="outline"
-                className="border-cyber-blue text-cyber-blue hover:bg-cyber-blue hover:text-black"
-              >
-                <Icon name="ArrowLeft" size={16} className="mr-2" />
-                Назад к играм
-              </Button>
-            )}
+              {selectedGame && (
+                <Button 
+                  onClick={() => {
+                    setSelectedGame(null);
+                    audioManager.playMenuSound();
+                  }}
+                  variant="outline"
+                  className="border-cyber-blue text-cyber-blue hover:bg-cyber-blue hover:text-black"
+                >
+                  <Icon name="ArrowLeft" size={16} className="mr-2" />
+                  Назад к играм
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
       </header>
 
       {/* Audio Controls Modal */}
