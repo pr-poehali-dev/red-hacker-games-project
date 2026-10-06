@@ -575,35 +575,29 @@ const SpaceGame = ({ onScore }: { onScore: (score: number) => void }) => {
       return newAsteroids;
     });
 
-    setBullets(prevBullets => {
-      setAsteroids(prevAsteroids => {
-        const newBullets = [...prevBullets];
-        const newAsteroids = [...prevAsteroids];
-        
-        for (let i = newBullets.length - 1; i >= 0; i--) {
-          for (let j = newAsteroids.length - 1; j >= 0; j--) {
-            const bullet = newBullets[i];
-            const asteroid = newAsteroids[j];
-            
-            if (Math.abs(bullet.x - asteroid.x) < 15 && Math.abs(bullet.y - asteroid.y) < 15) {
-              newBullets.splice(i, 1);
-              newAsteroids.splice(j, 1);
-              setScore(prev => {
-                const newScore = prev + 10;
-                onScore(newScore);
-                audioManager.playExplosionSound();
-                return newScore;
-              });
-              break;
-            }
-          }
+    const hitBullets = new Set<number>();
+    const hitAsteroids = new Set<number>();
+    bullets.forEach((bullet, i) => {
+      asteroids.forEach((asteroid, j) => {
+        if (hitBullets.has(i) || hitAsteroids.has(j)) return;
+        if (Math.abs(bullet.x - asteroid.x) < 15 && Math.abs(bullet.y - asteroid.y) < 15) {
+          hitBullets.add(i);
+          hitAsteroids.add(j);
         }
-        
-        return newAsteroids;
       });
-      
-      return newBullets;
     });
+    if (hitAsteroids.size > 0) {
+      const hitBulletPos = bullets.filter((_, i) => hitBullets.has(i));
+      const hitAsteroidPos = asteroids.filter((_, j) => hitAsteroids.has(j));
+      setBullets(prev => prev.filter(b => !hitBulletPos.some(h => Math.abs(h.x - b.x) < 1 && Math.abs(h.y - 5 - b.y) < 6)));
+      setAsteroids(prev => prev.filter(a => !hitAsteroidPos.some(h => Math.abs(h.x - a.x) < 1 && Math.abs(h.y + 2 - a.y) < 3)));
+      audioManager.playExplosionSound();
+      setScore(prev => {
+        const newScore = prev + 10 * hitAsteroids.size;
+        onScore(newScore);
+        return newScore;
+      });
+    }
 
     asteroids.forEach(asteroid => {
       if (Math.abs(shipX - asteroid.x) < 20 && asteroid.y > 250) {
@@ -1583,7 +1577,7 @@ const StrategyGame = ({ onScore }: { onScore: (score: number) => void }) => {
               key={i}
               onClick={() => unit ? setSelected(units.indexOf(unit)) : moveUnit(x, y)}
               className={`w-8 h-8 border border-gray-600 cursor-pointer flex items-center justify-center text-xs ${
-                selected === units.indexOf(unit) ? 'bg-cyber-purple' :
+                unit && selected === units.indexOf(unit) ? 'bg-cyber-purple' :
                 unit ? (unit.team === 1 ? 'bg-cyber-blue' : 'bg-cyber-red') : 'bg-gray-800'
               }`}
             >
